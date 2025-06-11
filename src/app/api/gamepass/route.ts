@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 
+async function getPlayerInfo(userId: string): Promise<any> {
+  const res = await fetch(`https://users.roblox.com/v1/users/${userId}`)
+  const data = await res.json()
+  return data
+}
+
 async function getPlayerGames(userId: string): Promise<{ id: string }[]> {
   const res = await fetch(`https://games.roblox.com/v2/users/${userId}/games`)
   const data = await res.json()
@@ -61,9 +67,11 @@ export async function GET(request: NextRequest) {
     return typeof gamepass.price === "number"
   }))
 
+  const player = await getPlayerInfo(id)
+
   if (withPlayerAvatar) {
-    return NextResponse.json({ gamepasses: allGamepasses, avatar: await getPlayerAvatar(id) })
+    return NextResponse.json({ gamepasses: allGamepasses, avatar: await getPlayerAvatar(id), player })
   }
 
-  return NextResponse.json(allGamepasses)
+  return NextResponse.json({ gamepasses: allGamepasses, player })
 }
