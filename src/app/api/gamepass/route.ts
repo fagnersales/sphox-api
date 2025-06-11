@@ -62,7 +62,12 @@ export async function GET(request: NextRequest) {
   const withPlayerAvatar = !!searchParams.get("withPlayerAvatar")
 
   const games = await getPlayerGames(id)
-  const allGamepasses = await Promise.all(games.map(game => getGamePasses(game.id))).then(passes => passes.flat().filter(gamepass => {
+  const allGamepasses = await Promise.all(games.map(game => getGamePasses(game.id))).then(passes => passes.flat().map(gamepass => {
+    return {
+      ...gamepass,
+      url: `https://www.roblox.com/game-pass/${gamepass.id}`
+    }
+  }).filter(gamepass => {
     if (!sellableOnly) return true
     return typeof gamepass.price === "number"
   }))
