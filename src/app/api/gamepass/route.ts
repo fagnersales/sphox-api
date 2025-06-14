@@ -70,6 +70,10 @@ export async function GET(request: NextRequest) {
   }).filter(gamepass => {
     if (!sellableOnly) return true
     return typeof gamepass.price === "number"
+  }).sort((a, b) => {
+    if (!a.price) return 0
+    if (!b.price) return 0
+    return a.price - b.price
   }))
 
   const player = await getPlayerInfo(id)
