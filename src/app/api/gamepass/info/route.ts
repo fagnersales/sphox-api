@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
 
     const response: any = {
       gamepass: {
+        id: gamepassId,
         name: gamepassData.Name,
         creator: {
           id: gamepassData.Creator.Id,
