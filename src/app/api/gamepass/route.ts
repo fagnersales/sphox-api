@@ -1,43 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-
-async function getPlayerInfo(userId: string): Promise<any> {
-  const res = await fetch(`https://users.roblox.com/v1/users/${userId}`)
-  const data = await res.json()
-  return data
-}
-
-async function getPlayerGames(userId: string): Promise<{ id: string }[]> {
-  const res = await fetch(`https://games.roblox.com/v2/users/${userId}/games`)
-  const data = await res.json()
-  return data.data
-}
-
-async function getGamePasses(universeId: string): Promise<{ id: number, name: string, price: number | null }[]> {
-  const res = await fetch(`https://games.roblox.com/v1/games/${universeId}/game-passes?limit=100`)
-  const data = await res.json()
-  return data.data
-}
-
-async function getIdFromUsername(username: string): Promise<{ id: number }> {
-  const res = await fetch(`https://users.roblox.com/v1/usernames/users`, {
-    method: "POST",
-    body: JSON.stringify({
-      usernames: [username],
-      excludeBannedUsers: true
-    })
-  })
-  const data = await res.json()
-  return data.data[0]
-}
-
-async function getPlayerAvatar(userId: string, retries: number = 0): Promise<{ imageUrl: string }> {
-  const res = await fetch(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${userId}&size=100x100&format=webp&isCircular=true`)
-  const data = await res.json()
-  const result = data.data[0]
-  if (result.state !== "Completed" && retries === 0) return getPlayerAvatar(userId, 1)
-  return result
-}
-
+import {
+  getIdFromUsername,
+  getGamePasses,
+  getPlayerInfo,
+  getPlayerGames,
+  getPlayerAvatar,
+} from "@/roblox-api"
+import { booleanParameter } from "@/utils/boolean-parameter";
+import { numberParameter } from "@/utils/number-parameter";
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
@@ -58,17 +28,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "UserId not found" }, { status: 404 })
   }
 
-  const sellableOnly = !!searchParams.get("sellableOnly");
-  const withPlayerAvatar = !!searchParams.get("withPlayerAvatar");
+  const sellableOnly = booleanParameter(request, "sellableOnly");
+  const withPlayerAvatar = booleanParameter(request, "withPlayerAvatar");
 
-  const amountRaw = searchParams.get("amount");
-  const amount = amountRaw && !Number.isNaN(+amountRaw) ? +amountRaw : null;
-
-  const errorMarginRaw = searchParams.get("errorMargin");
-  const errorMargin = errorMarginRaw && !Number.isNaN(+errorMarginRaw) ? +errorMarginRaw : null;
-
-  const limitRaw = searchParams.get("limit");
-  const limit = limitRaw && !Number.isNaN(+limitRaw) ? +limitRaw : null;
+  const amount = numberParameter(request, "amount");
+  const errorMargin = numberParameter(request, "errorMargin");
+  const limit = numberParameter(request, "limit");
 
   const games = await getPlayerGames(id)
   const allGamepasses = await Promise.all(games.map(game => getGamePasses(game.id))).then(passes => passes.flat().map(gamepass => {
@@ -95,9 +60,14 @@ export async function GET(request: NextRequest) {
 
   const player = await getPlayerInfo(id)
 
-  if (withPlayerAvatar) {
-    return NextResponse.json({ gamepasses: allGamepasses, avatar: await getPlayerAvatar(id), player })
+  const response: any = {
+    player,
+    gamepasses: allGamepasses,
   }
 
-  return NextResponse.json({ gamepasses: allGamepasses, player })
+  if (withPlayerAvatar) {
+    response.avatar = await getPlayerAvatar(id)
+  }
+
+  return NextResponse.json(response)
 }
