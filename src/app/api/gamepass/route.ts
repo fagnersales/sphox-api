@@ -61,6 +61,13 @@ export async function GET(request: NextRequest) {
   const sellableOnly = !!searchParams.get("sellableOnly")
   const withPlayerAvatar = !!searchParams.get("withPlayerAvatar")
 
+  const amountRaw = searchParams.get("amount")
+  const amount = amountRaw && !Number.isNaN(+amountRaw) ? +amountRaw : null;
+
+  const errorMarginRaw = searchParams.get("errorMargin")
+  const errorMargin = errorMarginRaw && !Number.isNaN(+errorMarginRaw) ? +errorMarginRaw : null;
+  console.log({ amount, errorMargin })
+
   const games = await getPlayerGames(id)
   const allGamepasses = await Promise.all(games.map(game => getGamePasses(game.id))).then(passes => passes.flat().map(gamepass => {
     return {
@@ -68,6 +75,14 @@ export async function GET(request: NextRequest) {
       url: `https://www.roblox.com/game-pass/${gamepass.id}`
     }
   }).filter(gamepass => {
+    if (amount) {
+      if (!gamepass.price) return false;
+      if (!errorMargin) return gamepass.price === amount
+      const difference = gamepass.price - amount
+      if (difference > 0) return false;
+      return Math.abs(difference) <= errorMargin
+    }
+
     if (!sellableOnly) return true
     return typeof gamepass.price === "number"
   }).sort((a, b) => {
