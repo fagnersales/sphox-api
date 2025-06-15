@@ -58,15 +58,17 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "UserId not found" }, { status: 404 })
   }
 
-  const sellableOnly = !!searchParams.get("sellableOnly")
-  const withPlayerAvatar = !!searchParams.get("withPlayerAvatar")
+  const sellableOnly = !!searchParams.get("sellableOnly");
+  const withPlayerAvatar = !!searchParams.get("withPlayerAvatar");
 
-  const amountRaw = searchParams.get("amount")
+  const amountRaw = searchParams.get("amount");
   const amount = amountRaw && !Number.isNaN(+amountRaw) ? +amountRaw : null;
 
-  const errorMarginRaw = searchParams.get("errorMargin")
+  const errorMarginRaw = searchParams.get("errorMargin");
   const errorMargin = errorMarginRaw && !Number.isNaN(+errorMarginRaw) ? +errorMarginRaw : null;
-  console.log({ amount, errorMargin })
+
+  const limitRaw = searchParams.get("limit");
+  const limit = limitRaw && !Number.isNaN(+limitRaw) ? +limitRaw : null;
 
   const games = await getPlayerGames(id)
   const allGamepasses = await Promise.all(games.map(game => getGamePasses(game.id))).then(passes => passes.flat().map(gamepass => {
@@ -89,7 +91,7 @@ export async function GET(request: NextRequest) {
     if (!a.price) return 0
     if (!b.price) return 0
     return a.price - b.price
-  }))
+  }).slice(0, limit ?? 100))
 
   const player = await getPlayerInfo(id)
 
